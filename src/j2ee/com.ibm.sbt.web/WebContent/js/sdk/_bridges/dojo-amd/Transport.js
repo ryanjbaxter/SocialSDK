@@ -169,6 +169,7 @@ define([ 'dojo/_base/declare', 'dojo/_base/xhr', 'dojo/_base/lang', 'dojox/xml/p
             var _error = new Error();
             _error.code = error.status || (error.response&&error.response.status) || 400;
             _error.cause = error;
+            _error.message = error.message;
             if (error.response) {
                 _error.response = lang.mixin({}, error.response);
             }

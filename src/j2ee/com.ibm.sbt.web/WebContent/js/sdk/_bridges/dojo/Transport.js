@@ -167,6 +167,7 @@ define([ './declare', 'dojo/_base/xhr', 'dojox/xml/parser', '../util', '../Promi
             var _error = new Error();
             _error.code = error.status || (error.response&&error.response.status) || 400;
             _error.cause = error;
+            _error.message = error.message;
             if (error.response) {
                 _error.response = dojo.mixin({}, error.response);
             }

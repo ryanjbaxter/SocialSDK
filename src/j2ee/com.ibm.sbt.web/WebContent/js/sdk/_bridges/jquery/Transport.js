@@ -223,6 +223,7 @@ define(['./declare', '../util', '../Promise', './jquery'], function(declare, uti
             _error.cause = {
             		responseText: jqXHR.responseText
             };
+            _error.message = jqXHR.statusText;
             _error.response = jqXHR;
             return _error;
         }
