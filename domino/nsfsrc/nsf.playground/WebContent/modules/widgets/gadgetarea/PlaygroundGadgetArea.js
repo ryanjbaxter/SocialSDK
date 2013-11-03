@@ -6,9 +6,11 @@
  */
 define(['dojo/_base/declare', 'explorer/widgets/gadgetarea/GadgetArea', 'dojo/on', 'dojo/topic', 'dojo/hash', 'dojo/_base/lang', 
         'explorer/ExplorerContainer', 'explorer/widgets/Loading', 'dojo/dom', 'playground/gadget-spec-service',
-        'dojo/io-query', 'dojo/json', 'dijit/registry', 'playground/util'],
+        'dojo/io-query', 'dojo/json', 'dijit/registry', 'playground/util', 'explorer/widgets/gadgetarea/PreferencesDialog',
+        'dojo/dom-construct', 'dojo/_base/window'],
         function(declare, GadgetArea, on, topic, hash, lang, ExplorerContainer, Loading, dom, 
-        		gadgetSpecService, ioQuery, json, registry, util) {
+        		gadgetSpecService, ioQuery, json, registry, util, PreferencesDialog, domConstruct,
+        		win) {
 	return declare('PlaygroundGadgetAreaWidget', [ GadgetArea ], {
     	  //TODO at some point we actually want to use a real template
     	  templateString : '<div></div>',
@@ -20,14 +22,22 @@ define(['dojo/_base/declare', 'explorer/widgets/gadgetarea/GadgetArea', 'dojo/on
     	   * @see {@link http://dojotoolkit.org/reference-guide/1.8/dijit/_WidgetBase.html|Dojo Documentation}
     	   */
     	  startup : function() {
-			//TODO once we have dealt with the loading widget we can remove the majority of this code
-          	this.expContainer = new ExplorerContainer();
-          	this.siteCounter = 0;
-          	this.siteParent = this.domNode;;
-          	var self = this;
-          	this.loadingWidget = new Loading();
-          	this.setupEventListeners();
-          	this.setupSubscriptions();
+			this.inherited(arguments);
+			
+			this.prefDialog = new PreferencesDialog();
+			domConstruct.place(this.prefDialog.domNode, win.body(), 'last');
+			this.prefDialog.startup();
+			var self = this;
+		    this.prefDialog.addPrefsChangedListener(function(prefs) {
+		        var params = {};
+		        params[osapi.container.RenderParam.USER_PREFS] = prefs;
+		        self.reRenderGadget(params);
+		    });
+		    
+		    on(this.getExplorerContainer(), 'setpreferences', function(site, url, prefs) {
+		    	self.prefDialog.setPrefs(prefs);
+		    });
+			
           	if(hash()) {
           		this.loadFromHash()
           	}
@@ -122,13 +132,25 @@ define(['dojo/_base/declare', 'explorer/widgets/gadgetarea/GadgetArea', 'dojo/on
         		  url = url.replace("https://","http://");
         		  var jsonCode = self.jsonEditor.getValue();
         		  if(!jsonCode) {
-        			  self.renderGadget(url);
+        			  self.renderGadget(url).then(function(metadata) {
+        				  if(metadata && metadata[url]) {
+        					  self.prefDialog.addPrefsToUI(metadata[url].userPrefs);
+        			      }
+        			  });
         		  } else {
-        			  self.renderEmbeddedExperience(url, jsonCode);
+        			  self.renderEmbeddedExperience(url, jsonCode).then(function(results) {
+        				  if(results.metadata && results.metadata[url]) {
+        					  self.prefDialog.addPrefsToUI(results.metadata[url].userPrefs);
+        			      }
+        			  });
         		  }
         	  }, function(error) {
         		  alert(error);
         	  });
+          },
+          
+          addMenuItems: function() {
+              //override this and do nothing to prevent the default behavior
           }
 	});
 });
