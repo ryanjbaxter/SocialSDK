@@ -16,6 +16,8 @@
 package com.ibm.sbt.services.client.connections.communities;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -24,22 +26,40 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.http.Header;
 
 import com.ibm.commons.util.StringUtil;
+import com.ibm.commons.util.io.StreamUtil;
 import com.ibm.sbt.services.client.ClientServicesException;
+import com.ibm.sbt.services.client.ClientService.ContentStream;
 import com.ibm.sbt.services.client.base.BaseService;
 import com.ibm.sbt.services.client.base.ConnectionsConstants;
 import com.ibm.sbt.services.client.base.transformers.TransformerException;
 import com.ibm.sbt.services.client.base.util.EntityUtil;
 import com.ibm.sbt.services.client.connections.communities.feedhandler.BookmarkFeedHandler;
 import com.ibm.sbt.services.client.connections.communities.feedhandler.CommunityFeedHandler;
+import com.ibm.sbt.services.client.connections.files.AccessType;
+import com.ibm.sbt.services.client.connections.files.File;
+import com.ibm.sbt.services.client.connections.files.FileList;
+import com.ibm.sbt.services.client.connections.files.FileService;
+import com.ibm.sbt.services.client.connections.files.FileServiceException;
+import com.ibm.sbt.services.client.connections.files.FileServiceURIBuilder;
+import com.ibm.sbt.services.client.connections.files.ResultType;
+import com.ibm.sbt.services.client.connections.files.SubFilters;
+import com.ibm.sbt.services.client.connections.files.feedHandler.FileFeedHandler;
+import com.ibm.sbt.services.client.connections.files.model.Headers;
+import com.ibm.sbt.services.client.connections.forums.feedhandler.ForumsFeedHandler;
 import com.ibm.sbt.services.client.connections.forums.feedhandler.TopicsFeedHandler;
 import com.ibm.sbt.services.client.connections.communities.feedhandler.InviteFeedHandler;
 import com.ibm.sbt.services.client.connections.communities.feedhandler.MemberFeedHandler;
 import com.ibm.sbt.services.client.connections.communities.transformers.CommunityMemberTransformer;
+import com.ibm.sbt.services.client.connections.communities.transformers.InviteTransformer;
 import com.ibm.sbt.services.client.connections.communities.util.Messages;
+import com.ibm.sbt.services.client.connections.forums.ForumList;
 import com.ibm.sbt.services.client.connections.forums.ForumService;
+import com.ibm.sbt.services.client.connections.forums.ForumServiceException;
+import com.ibm.sbt.services.client.connections.forums.ForumTopic;
 import com.ibm.sbt.services.client.connections.forums.TopicList;
 import com.ibm.sbt.services.client.Response;
 import com.ibm.sbt.services.client.ClientService;
+import com.ibm.sbt.services.endpoints.Endpoint;
 import com.ibm.sbt.services.util.AuthUtil;
 
 /**
@@ -90,6 +110,27 @@ public class CommunityService extends BaseService {
 	 *            Creates CommunityService with specified endpoint and CacheSize
 	 */
 	public CommunityService(String endpoint, int cacheSize) {
+		super(endpoint, cacheSize);
+	}
+
+	/**
+	 * Constructor - Creates CommunityService Object with a specified endpoint
+	 * 
+	 * @param endpoint
+	 *            Creates CommunityService with specified endpoint and a default CacheSize
+	 */
+	public CommunityService(Endpoint endpoint) {
+		this(endpoint, DEFAULT_CACHE_SIZE);
+	}
+
+	/**
+	 * Constructor - Creates CommunityService Object with specified endpoint and cache size
+	 * 
+	 * @param endpoint
+	 * @param cacheSize
+	 *            Creates CommunityService with specified endpoint and CacheSize
+	 */
+	public CommunityService(Endpoint endpoint, int cacheSize) {
 		super(endpoint, cacheSize);
 	}
 
@@ -307,6 +348,45 @@ public class CommunityService extends BaseService {
 		return getForumTopics(communityUuid, null);
 	}
 	/**
+	 * Wrapper method to get forums of a community .
+	 * 
+	 * @param communityUuid 
+	 * 				 Uuid of Community for which forums are to be fetched
+	 * @return ForumList 
+	 * @throws CommunityServiceException
+	 */
+	public ForumList getForums(String communityUuid) throws CommunityServiceException {
+		return getForums(communityUuid, null);
+	}
+	/**
+	 * Wrapper method to get forums of a community .
+	 * 
+	 * @param communityUuid 
+	 * 				 Uuid of Community for which forums are to be fetched
+	 * @param query parameters
+	 * @return ForumList 
+	 * @throws CommunityServiceException
+	 */
+	public ForumList getForums(String communityUuid, Map<String, String> parameters) throws CommunityServiceException {
+		
+		if (StringUtil.isEmpty(communityUuid)){
+			throw new CommunityServiceException(null, Messages.NullCommunityIdException);
+		}
+		if(null == parameters){
+			parameters = new HashMap<String, String>();
+		}		
+		parameters.put(COMMUNITY_UNIQUE_IDENTIFIER, communityUuid);
+		ForumList forums;
+		try {
+			ForumService svc = new ForumService(this.endpoint);
+			forums = svc.getAllForums(parameters);
+		}catch (Exception e) {
+			throw new CommunityServiceException(e, Messages.CommunityForumTopicsException, communityUuid);
+		} 
+		return forums;
+	}
+	
+	/**
 	 * Wrapper method to get forum topics of a community .
 	 * 
 	 * @param communityUuid 
@@ -325,7 +405,7 @@ public class CommunityService extends BaseService {
 		parameters.put(COMMUNITY_UNIQUE_IDENTIFIER, communityUuid);
 		String requestUrl = resolveCommunityUrl(CommunityEntity.COMMUNITY.getCommunityEntityType(),	CommunityType.FORUMTOPICS.getCommunityType());
 		
-		TopicList forumTopics = null;
+		TopicList forumTopics;
 		try {
 			forumTopics = (TopicList) getEntities(requestUrl, parameters, new TopicsFeedHandler(new ForumService()));
 		}catch (ClientServicesException e) {
@@ -336,7 +416,29 @@ public class CommunityService extends BaseService {
 		
 		return forumTopics;
 	}
-	
+	/**
+	 * Wrapper method to create a Topic for default Forum of a Community
+	 * <p>
+	 * User should be authenticated to call this method
+	 * @param ForumTopic
+	 * @return Topic
+	 * @throws ForumServiceException
+	 */
+	public ForumTopic createForumTopic(ForumTopic topic, String communityId)throws CommunityServiceException {
+		try {
+			ForumService svc = new ForumService(this.endpoint);
+			return svc.createCommunityForumTopic(topic, communityId);
+		}catch (Exception e) {
+			throw new CommunityServiceException(e, Messages.CreateCommunityForumTopicException, communityId);
+		} 
+	}
+	/**
+     * Get a list of the outstanding community invitations of the currently authenticated 
+     * user or provide parameters to search for a subset of those invitations.
+     * 
+     * @method getMyInvites
+     * @return pending invites for the authenticated user
+     */
 	public InviteList getMyInvites() throws CommunityServiceException {
 		return getMyInvites(null);
 	}
@@ -355,7 +457,7 @@ public class CommunityService extends BaseService {
 		if(null == parameters){
 			parameters = new HashMap<String, String>();
 		}		
-		String requestUrl = resolveCommunityUrl(CommunityEntity.COMMUNITY.getCommunityEntityType(),	CommunityType.INVITES.getCommunityType());
+		String requestUrl = resolveCommunityUrl(CommunityEntity.COMMUNITY.getCommunityEntityType(),	CommunityType.MYINVITES.getCommunityType());
 		InviteList invites = null;
 		try {
 			invites = (InviteList) getEntities(requestUrl, parameters, new InviteFeedHandler(this));
@@ -367,6 +469,123 @@ public class CommunityService extends BaseService {
 		}
 		
 		return invites;
+	}
+	
+	/**
+     * Method to create a community invitation, user should be authenticated to perform this operation
+	 * 
+     * @method createInvite
+     * @param communityUuid 
+	 * 				 community Id for which invite is to be sent
+	 * @param contributorId
+	 *				 user id of contributor
+     * @return pending invites for the authenticated user
+     */
+	
+	public Invite createInvite(String communityUuid, String contributorId) throws CommunityServiceException {
+		
+		if (StringUtil.isEmpty(communityUuid)){
+			throw new CommunityServiceException(null, Messages.NullCommunityIdException);
+		}
+		Map<String, String> parameters = new HashMap<String, String>();
+		parameters.put(COMMUNITY_UNIQUE_IDENTIFIER, communityUuid);
+		String inviteUrl = resolveCommunityUrl(CommunityEntity.COMMUNITY.getCommunityEntityType(),
+				CommunityType.INVITES.getCommunityType());
+		Object communityPayload;
+		Member member = new Member(this, contributorId);
+		try {
+			communityPayload = new InviteTransformer().transform(member.getFieldsMap());
+		} catch (TransformerException e) {
+			throw new CommunityServiceException(e, Messages.CreateCommunityPayloadException);
+		}
+		Invite invite = null;
+		
+		try {
+			Response result = super.createData(inviteUrl, parameters, communityPayload);
+			invite = (Invite) new InviteFeedHandler(this).createEntity(result);
+
+		} catch (Exception e) {
+			throw new CommunityServiceException(e, Messages.CreateInvitationException);
+		}
+		return invite;
+	}
+	
+	/**
+     * Method to accept a outstanding community invitation, user should be authenticated to perform this operation
+	 * 
+     * @method acceptInvite
+     * @param communityUuid 
+	 * 				 community Id for which invite is sent
+	 * @param contributorId
+	 *				 user id of contributor
+     * @return boolean
+     */
+	
+	public boolean acceptInvite(String communityUuid, String contributorId) throws CommunityServiceException {
+		
+		if (StringUtil.isEmpty(communityUuid)){
+			throw new CommunityServiceException(null, Messages.NullCommunityIdException);
+		}
+		boolean success = true;
+		Map<String, String> parameters = new HashMap<String, String>();
+		parameters.put(COMMUNITY_UNIQUE_IDENTIFIER, communityUuid);
+		String inviteUrl = resolveCommunityUrl(CommunityEntity.COMMUNITY.getCommunityEntityType(),
+				CommunityType.MEMBERS.getCommunityType());
+	
+		Object communityPayload;
+		
+		Member member = new Member(this, contributorId);
+		try {
+			communityPayload = new CommunityMemberTransformer().transform(member.getFieldsMap());
+		} catch (TransformerException e) {
+			success = false;
+			throw new CommunityServiceException(e, Messages.CreateCommunityPayloadException);
+		}
+		
+		try {
+			super.createData(inviteUrl, parameters, communityPayload);
+		} catch (Exception e) {
+			success = false;
+			throw new CommunityServiceException(e, Messages.AcceptInvitationException);
+		} 
+		return success;
+		
+	}
+	
+	/**
+     * Method to decline a outstanding community invitation, user should be authenticated to perform this operation
+	 * 
+     * @method declineInvite
+     * @param communityUuid 
+	 * 				 community Id for which invite is sent
+	 * @param contributorId
+	 *				 user id of contributor
+     * @return boolean
+     */
+	
+	public boolean declineInvite(String communityUuid, String contributorId) throws CommunityServiceException {
+		
+		if (StringUtil.isEmpty(communityUuid)){
+			throw new CommunityServiceException(null, Messages.NullCommunityIdException);
+		}
+		boolean success = true;
+		Map<String, String> parameters = new HashMap<String, String>();
+		parameters.put(COMMUNITY_UNIQUE_IDENTIFIER, communityUuid);
+		if(EntityUtil.isEmail(contributorId)){
+			parameters.put("email", contributorId);
+		}
+		else{
+			parameters.put("userid", contributorId);	
+		}
+		String inviteUrl = resolveCommunityUrl(CommunityEntity.COMMUNITY.getCommunityEntityType(),CommunityType.INVITES.getCommunityType());
+		
+		try {
+			super.deleteData(inviteUrl, parameters, communityUuid);
+		} catch (Exception e) {
+			success = false;
+			throw new CommunityServiceException(e, Messages.DeclineInvitationException);
+		}
+		return success;
 	}
 
 	/**
@@ -693,5 +912,56 @@ public class CommunityService extends BaseService {
 		}
 
 		return comBaseUrl.toString();
+	}
+	
+	/**
+	 * Method to get a list of Community Files
+	 * @param communityId
+	 * @param params
+	 * @return
+	 * @throws CommunityServiceException
+	 */
+	public FileList getCommunityFiles(String communityId, HashMap<String, String> params) throws CommunityServiceException {
+		FileService fileService = new FileService(this.endpoint);
+		try {
+			return fileService.getCommunityFiles(communityId, params);
+		} catch (FileServiceException e) {
+			throw new CommunityServiceException(e);
+		}
+	}
+	
+	/**
+	 * Method to download a community file
+	 * @param ostream
+	 * @param fileId
+	 * @param communityId
+	 * @param params
+	 * @return long
+	 * @throws CommunityServiceException
+	 */
+	public long downloadCommunityFile(OutputStream ostream, final String fileId, final String communityId, Map<String, String> params) throws CommunityServiceException {
+		FileService svc = new FileService(this.endpoint);
+		try {
+			return svc.downloadCommunityFile(ostream, fileId, communityId, params);
+		} catch (FileServiceException e) {
+			throw new CommunityServiceException(e, Messages.DownloadCommunitiesException);
+		} 
+	}
+	
+	/**
+	 * Method to upload a File to Community
+	 * @param iStream
+	 * @param communityId
+	 * @param title
+	 * @param length
+	 * @throws CommunityServiceException
+	 */
+	public File uploadFile(InputStream iStream, String communityId, final String title, long length) throws CommunityServiceException {
+		FileService svc = new FileService(this.endpoint);
+		try {
+			return svc.uploadCommunityFile(iStream, communityId, title, length);
+		} catch (FileServiceException e) {
+			throw new CommunityServiceException(e, Messages.UploadCommunitiesException);
+		}
 	}
 }

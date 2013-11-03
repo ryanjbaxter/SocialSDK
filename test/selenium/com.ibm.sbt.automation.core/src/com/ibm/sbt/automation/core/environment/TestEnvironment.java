@@ -121,6 +121,7 @@ public abstract class TestEnvironment {
     static final public String PROP_FIREBUG_ENABLED             = "firebug.enabled"; //$NON-NLS-1$
     static final public String PROP_ENABLE_MOCKTRANSPORT        = "enable.mocktransport"; //$NON-NLS-1$
     static final public String PROP_ENABLE_DEBUGTRANSPORT       = "enable.debugtransport"; //$NON-NLS-1$
+    static final public String PROP_ENABLE_OVERWRITETESTDATA    = "enabled.overwritetestdata"; //$NON-NLS-1$
 
     private static final String PROP_OVERRIDE_CONNECTIONS_BE    = "connections.override.url"; //$NON-NLS-1$
     private static final String PROP_OVERRIDE_SMARTCLOUD_BE     = "smartcloud.override.url"; //$NON-NLS-1$
@@ -238,6 +239,14 @@ public abstract class TestEnvironment {
     }
 
     /**
+     * Return true if test data should be overwritten.
+     * @return
+     */
+    public boolean isOverwriteTestdata() {
+    	return properties.getProperty(PROP_ENABLE_OVERWRITETESTDATA, "false").equals("true");
+    }
+
+    /**
      * Remove a snippet param
      * @param key
      */
@@ -346,11 +355,18 @@ public abstract class TestEnvironment {
         }
         //TODO call this init
         webDriver = getWebDriver();
+        String windowHandle = webDriver.getWindowHandle();
+
         webDriver.get(launchUrl);
-        
-        WebElement webElement = authenticate(baseTest, null);
-        if (baseTest.getAuthType() != AuthType.NONE && baseTest.getAuthType() != AuthType.AUTO_DETECT) {
-            assertNotNull("Unable to confirm authentication for: " + baseTest.getSnippetId(), webElement);
+        WebElement webElement = authenticate(baseTest, null, windowHandle);
+
+        if (baseTest.getAuthType() != AuthType.NONE && baseTest.getAuthType() != AuthType.AUTO_DETECT ) {
+            if (!baseTest.isResultsReady()) { //try waiting some more for the page to refresh
+                baseTest.waitForResult(1);
+            }
+            if (!baseTest.isResultsReady()) { //let it go if the page is ready according to the test's condition
+                assertNotNull("Unable to confirm authentication for: " + baseTest.getSnippetId(), webElement);
+            }
         }
 
         return getPageObject();
@@ -363,21 +379,21 @@ public abstract class TestEnvironment {
      * 
      * If authType == NONE then null is returned
      */
-    protected WebElement authenticate(BaseTest baseTest, AuthType authType) {
+    protected WebElement authenticate(BaseTest baseTest, AuthType authType, String originalHandle) {
         if (logger.isLoggable(Level.FINE)) {
             logger.entering(sourceClass, "authenticate", new Object[] { baseTest });
         }
         
-        String windowHandle = getPageObject().getWebDriver().getWindowHandle();
 
         if (authType == null) {
             authType = baseTest.getAuthType();
         }
+
         switch (authType) {
         case NONE:
             break;
         case AUTO_DETECT:
-            return handleAutoDetect(baseTest);
+            return handleAutoDetect(baseTest, originalHandle);
         case BASIC:
             handleBasicLogin(baseTest);
             break;
@@ -388,22 +404,22 @@ public abstract class TestEnvironment {
             handleOAuth20(baseTest);
             break;
         }
-
         // restore window handle
-        restoreWindowHandle(webDriver, windowHandle);
+        restoreWindowHandle(webDriver, originalHandle);
 
         // wait to confirm result page has displayed
         WebElement webElement = baseTest.waitForResult(loginTimeout);
         if (logger.isLoggable(Level.FINE)) {
             logger.exiting(sourceClass, "authenticate", webElement);
         }
+
         return webElement;
     }
 
     /*
      * Handle auto detection of the authentication mechanism
      */
-    protected WebElement handleAutoDetect(BaseTest baseTest) {
+    protected WebElement handleAutoDetect(BaseTest baseTest, String originalHandle) {
         WebElement form = searchAnyAuthenticationForm(baseTest, loginTimeout);
         if (baseTest.isResultsReady()) {
         	// results for this test are ready so return them here
@@ -415,7 +431,7 @@ public abstract class TestEnvironment {
         	Trace.log("handleAutoDetect: " + form.getText() + " - " + authType);
         }
 
-        return authenticate(baseTest, authType);
+        return authenticate(baseTest, authType, originalHandle);
     }
 
     /*
@@ -1108,6 +1124,9 @@ public abstract class TestEnvironment {
         if (text.contains("Unrecognized SSL message, plaintext connection?")) {
             fail("Cannot reach the quickstart image, probably firewall issues\n"+text);
         }        
+        if (text.contains("oauth_consumer_missing_subscription")) {
+            fail("Missing OAuth configuration -> 'oauth_consumer_missing_subscription'\n"+text);
+        }        
         if (text.contains("Your account has been expired or suspended.")) {
             fail("Smartcloud credential probably expired\n"+text);
         }
@@ -1165,5 +1184,4 @@ public abstract class TestEnvironment {
             logger.severe(e.getMessage());
         }
     }
-
 }

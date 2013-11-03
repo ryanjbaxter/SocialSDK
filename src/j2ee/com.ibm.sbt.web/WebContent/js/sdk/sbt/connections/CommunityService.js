@@ -30,6 +30,8 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
     var MemberTmpl = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><entry xmlns=\"http://www.w3.org/2005/Atom\" xmlns:app=\"http://www.w3.org/2007/app\" xmlns:opensearch=\"http://a9.com/-/spec/opensearch/1.1/\" xmlns:snx=\"http://www.ibm.com/xmlns/prod/sn\"><contributor>${getEmail}${getUserid}</contributor><snx:role xmlns:snx=\"http://www.ibm.com/xmlns/prod/sn\" component=\"http://www.ibm.com/xmlns/prod/sn/communities\">${getRole}</snx:role><category term=\"person\" scheme=\"http://www.ibm.com/xmlns/prod/sn/type\"></category></entry>";
     var EmailTmpl = "<email>${email}</email>";
     var UseridTmpl = "<snx:userid xmlns:snx=\"http://www.ibm.com/xmlns/prod/sn\">${userid}</snx:userid>";
+    var AcceptInviteTmpl = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><entry xmlns=\"http://www.w3.org/2005/Atom\"><contributor>${getEmail}${getUserid}</contributor></entry>";
+    var CreateInviteTmpl = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><entry xmlns=\"http://www.w3.org/2005/Atom\" xmlns:app=\"http://www.w3.org/2007/app\" xmlns:snx=\"http://www.ibm.com/xmlns/prod/sn\"><category term=\"invite\" scheme=\"http://www.ibm.com/xmlns/prod/sn/type\"></category><contributor>${getEmail}${getUserid}</contributor></entry>";
     
     /*
      * CommunityDataHandler class.
@@ -750,6 +752,198 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
         }
 
     });
+    
+    
+    /**
+     * Event class represents an entry for an Events feed returned by the Connections REST API.
+     * 
+     * @class Event
+     * @namespace sbt.connections
+     */
+    var Event = declare(BaseEntity, {
+
+        /**
+         * Constructor for Event.
+         * 
+         * @constructor
+         * @param args
+         */
+        constructor : function(args) {
+            this.inherited(arguments, [ args ]);
+        },
+
+        /**
+         * Return the community UUID.
+         * 
+         * @method getCommunityUuid
+         * @return {String} communityUuid
+         */
+        getCommunityUuid : function() {
+            return this.getAsString("communityUuid");
+        },
+        
+        /**
+         * Return the id of the event.
+         * 
+         * @method getId
+         * @return {String} id
+         */
+        getId : function() {
+            return this.getAsString("uid");
+        },
+        
+        /**
+         * The Uuid of the event. This is per event rather than per event instance. 
+         * 
+         * e.g. if an event spans multiple days it will have multiple instances, yet each even will have the same Uuid.
+         * @method getEventUuid
+         * @return {String} Uuid of the event.
+         */
+        getEventUuid : function(){
+            return this.getAsString("eventUuid");
+        },
+        
+        /**
+         * The event instance uuid. This is per event instance, rather than per event. 
+         * e.g. if an event spans multiple days each day will have its own eventInstUuid.
+         * 
+         * Can be used with the{{#crossLink "CommunityService/getEvent:method"}}{{/crossLink}} method to retrieve event instances.
+         * @method getEventInstUuid
+         * @return {String} Uuid of the event instance.
+         */
+        getEventInstUuid : function(){
+            return this.getAsString("eventInstUuid");
+        },
+
+        /**
+         * Return the community event title.
+         * 
+         * @method getTitle
+         * @return {String} Community event title
+         */
+
+        getTitle : function() {
+            return this.getAsString("title");
+        },
+
+        /**
+         * Set the community event title.
+         * 
+         * @method setTitle
+         * @param {String} Community event title
+         */
+
+        setTitle : function(name) {
+            return this.setAsString("title", name);
+        },
+
+        /**
+         * Return the community event summary.
+         * 
+         * @method getSummary
+         * @return {String} Community event summary
+         */
+        getSummary : function() {
+            return this.getAsString("summary");
+        },
+
+        /**
+         * Set the community event summary.
+         * 
+         * @method setSummary
+         * @return {String} Community event summary
+         */
+        setSummary : function(summary) {
+            return this.setAsString("summary", summary);
+        },
+        
+        getEventAtomUrl : function(){
+            return this.getAsString("eventAtomUrl");
+        },
+        
+        /**
+         * Get the full event description, with content.
+         * @returns
+         */
+        getFullEvent : function(){
+            return this.service.getEvent(this.getEventInstUuid());
+        },
+        
+        getContent : function(){
+            return this.getAsString("content");
+        },
+        
+        getLocation : function(){
+            return this.getAsString("location");
+        },
+
+        /**
+         * Gets an author of IBM Connections community event.
+         * 
+         * @method getAuthor
+         * @return {Member} author Author of the community event
+         */
+        getAuthor : function() {
+            if (!this._author) {
+                this._author = {
+                    userid : this.getAsString("authorUserid"),
+                    name : this.getAsString("authorName"),
+                    email : this.getAsString("authorEmail"),
+                    authorState : this.getAsString("authorState")
+                };
+            }
+            return this._author;
+        },
+        
+        /**
+         * Gets the recurrence information of the event.
+         * 
+         * Recurrence information object consists of:
+         * frequency - 'daily' or 'weekly'
+         * interval - Week interval. Value is int between 1 and 5.
+         * until - The end date of the repeating event.
+         * allDay - 1 if an all day event, 0 otherwise.
+         * startDate - Start time of the event
+         * endDate - End time of the event
+         * byDay - Days of the week this event occurs, possible values are: SU,MO,TU,WE,TH,FR,SA
+         * 
+         * @method getRecurrence
+         * @return {Object} An object containing the above recurrence information of the community event.
+         */
+        getRecurrence : function() {
+            if (!this._recurrence) {
+                this._recurrence = {
+                    frequency : this.getAsString("frequency"),
+                    interval : this.getAsString("interval"),
+                    until : this.getAsString("until"),
+                    allDay : this.getAsString("allDay"),
+                    startDate : this.getAsString("startDate"),
+                    endDate : this.getAsString("endDate"),
+                    byDay : this.getAsString("byDay")
+                };
+            }
+            return this._recurrence;
+        },
+
+        /**
+         * Gets a contributor of IBM Connections community event.
+         * 
+         * @method getContributor
+         * @return {Member} contributor Contributor of the community event
+         */
+        getContributor : function() {
+            if (!this._contributor) {
+                this._contributor = {
+                    userid : this.getAsString("contributorUserid"),
+                    name : this.getAsString("contributorName")
+                };
+            }
+            return this._contributor;
+        }
+
+    });
+    
+    
 
     /*
      * Method used to extract the community uuid for an id url.
@@ -822,6 +1016,49 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
                 xpath : consts.InviteXPath
             });
             return new Invite({
+                service : service,
+                id : entryHandler.getEntityId(),
+                dataHandler : entryHandler
+            });
+        }
+    };
+    
+    /*
+     * Callbacks used when reading a feed that contains Event entries.
+     */
+    var ConnectionsEventFeedCallbacks = {
+        createEntities : function(service,data,response) {
+            return new XmlDataHandler({
+                service :  service,
+                data : data,
+                namespaces : consts.Namespaces,
+                xpath : consts.CommunityFeedXPath
+            });
+        },
+        createEntity : function(service,data,response) {
+            var entryHandler = new XmlDataHandler({
+                service :  service,
+                data : data,
+                namespaces : consts.Namespaces,
+                xpath : consts.EventXPath
+            });
+            return new Event({
+                service : service,
+                id : entryHandler.getEntityId(),
+                dataHandler : entryHandler
+            });
+        }
+    };
+    
+    var ConnectionsEventCallbacks = {
+        createEntity : function(service,data,response) {
+            var entryHandler = new XmlDataHandler({
+                service :  service,
+                data : data,
+                namespaces : consts.Namespaces,
+                xpath : consts.EventXPath
+            });
+            return new Event({
                 service : service,
                 id : entryHandler.getEntityId(),
                 dataHandler : entryHandler
@@ -1008,6 +1245,68 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
             
             return member.load(args);
         },
+        
+        /**
+         * Get the Events for a community. See {{#crossLink "CommunityConstants/AtomCommunityEvents:attribute"}}{{/crossLink}} for a complete listing of parameters.
+         * 
+         * These results do not include all details of the event, such as content. However summaries are available.
+         * 
+         * @param communityId The uuid of the Community.
+         * @param startDate Include events that end after this date.
+         * @param endDate Include events that end before this date.
+         * @param args url parameters.
+         * 
+         * @returns
+         */
+        getCommunityEvents : function(communityUuid, startDate, endDate, args){
+        	var promise = this._validateCommunityUuid(communityUuid) || this._validateDateTimes(startDate, endDate);
+            if (promise) {
+                return promise;
+            }
+            var requiredArgs = {
+                calendarUuid : communityUuid
+            };
+            if(startDate){
+                lang.mixin(requiredArgs, {
+                    startDate : startDate
+                });
+            } 
+            if(endDate){
+                lang.mixin(requiredArgs, {
+                    endDate : endDate
+                });
+            }
+            
+            args = lang.mixin(args, requiredArgs);
+            
+            var options = {
+                method : "GET",
+                handleAs : "text",
+                query : args || {}
+            };
+                
+            return this.getEntities(consts.AtomCommunityEvents, options, this.getEventFeedCallbacks());
+        },
+        
+        /**
+         * Used to get the event with the given eventInstUuid. 
+         * 
+         * This will include all details of the event, including its content. 
+         * 
+         * @param eventInstUuid - The id of the event, also used as an identifier when caching the response
+         * @returns
+         */
+        getEvent : function(eventInstUuid){
+            var options = {
+                method : "GET",
+                handleAs : "text",
+                query : {
+                    eventInstUuid: eventInstUuid
+                }
+            };
+                
+            return this.getEntity(consts.AtomCommunityEvent, options, eventInstUuid, this.getEventCallbacks());
+        },
 
         /**
          * Get a list of the outstanding community invitations of the currently authenticated 
@@ -1027,7 +1326,7 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
             };
             
             return this.getEntities(consts.AtomCommunityInvitesMy, options, this.getInviteFeedCallbacks());
-        },
+        },      
 
         /**
          * Get a list of subcommunities associated with a community.
@@ -1079,6 +1378,123 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
             };
             
             return this.getEntities(consts.AtomCommunityForumTopics, options, this.getForumTopicFeedCallbacks());
+        },
+        
+        /**
+         * Decline an invite to be a member of a community, using the HTTP DELETE method.
+         * 
+         * @method declineInvite
+         * @param {String} communityUuid community id of the community whose invite is to be declined.
+         * @param {String} contributorId userId/email of the logged in user who is declining the invite.
+         * @param {Object} [args] Argument object
+         */
+        
+        declineInvite: function(communityUuid, contributorId, args) {
+        	var promise = this._validateCommunityUuid(communityUuid);
+            if (promise) {
+                return promise;
+            }            
+            promise = this._validateContributorId(contributorId);
+            if (promise) {
+                return promise;
+            }
+            var requestArgs = lang.mixin({
+                communityUuid : communityUuid                
+            }, args || {});
+            
+            var key = this.isEmail(contributorId) ? "email" : "userid";
+            requestArgs[key] = contributorId;
+            var options = {
+                method : "DELETE",
+                query : requestArgs,
+                handleAs : "text"
+            };
+            return this.deleteEntity(consts.AtomCommunityInvites, options, communityUuid);
+            
+        },
+        
+        /**
+         * Accept an invite to be a member of a community, using the HTTP POST method.
+         * 
+         * @method acceptInvite
+         * @param {String} communityUuid community id of the community whose invite is to be accepted.
+         * @param {String} contributorId userId/email of the logged in user who is accepting the invite.
+         * @param {Object} [args] Argument object
+         */
+        
+        acceptInvite: function(communityUuid, contributorId, args) {
+        	var promise = this._validateCommunityUuid(communityUuid);
+            if (promise) {
+                return promise;
+            }            
+            promise = this._validateContributorId(contributorId);
+            if (promise) {
+                return promise;
+            }
+            var requestArgs = lang.mixin({
+                communityUuid : communityUuid                
+            }, args || {});
+            
+            var options = {
+            	method : "POST",
+        		query : requestArgs,
+                headers : consts.AtomXmlHeaders,
+                data : this._constructAcceptInvitePostData(contributorId)
+            };
+            // return the community id for the community whose invite is accepted in the argument of the success promise.
+            var callbacks = {}; 
+            callbacks.createEntity = function(service,data,response) {                
+                return communityUuid;
+            };
+            return this.updateEntity(consts.AtomCommunityMembers, options, callbacks, args);
+            
+        },
+        
+        /**
+         * Create an invite to be a member of a community, using the HTTP POST method.
+         * 
+         * @method createInvite
+         * @param {String} communityUuid community id of the community for which invite is to be created.
+         * @param {String} contributorId userId/email of the user who is invited to be the member of the community.
+         * @param {Object} [args] Argument object
+         */
+        
+        createInvite: function(communityUuid, contributorId, args) {
+        	var promise = this._validateCommunityUuid(communityUuid);
+            if (promise) {
+                return promise;
+            }            
+            promise = this._validateContributorId(contributorId);
+            if (promise) {
+                return promise;
+            }
+            var requestArgs = lang.mixin({
+                communityUuid : communityUuid                
+            }, args || {});
+            
+            var options = {
+            	method : "POST",
+        		query : requestArgs,
+                headers : consts.AtomXmlHeaders,
+                data : this._constructCreateInvitePostData(contributorId)
+            };
+            // return the community id for the community whose invite is accepted in the argument of the success promise.
+            var callbacks = {};             
+            callbacks.createEntity = function(service,data,response) {
+                  var entryHandler = new CommunityDataHandler({
+                      data : data,
+                      namespaces : consts.Namespaces,
+                      xpath : consts.InviteXPath
+                  });
+                  return new Invite({
+                      service : service,
+                      id : entryHandler.getEntityId(),
+                      communityUuid : communityUuid,
+                      dataHandler : entryHandler
+                  });
+            };
+            return this.updateEntity(consts.AtomCommunityInvites, options, callbacks, args);
+            
         },
            
         /**
@@ -1401,6 +1817,17 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
         getInviteFeedCallbacks: function() {
             return ConnectionsInviteFeedCallbacks;
         },
+        
+        /*
+         * Callbacks used when reading a feed that contains Event entries.
+         */
+        getEventFeedCallbacks: function() {
+            return ConnectionsEventFeedCallbacks;
+        },
+        
+        getEventCallbacks: function(){
+            return ConnectionsEventCallbacks;
+        },
 
         /*
          * Callbacks used when reading an entry that contains a Community.
@@ -1445,6 +1872,15 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
 
             return communityUuid;
         },
+        
+        _toInvite : function(communityUuid, args){
+        	var invite = new Invite({
+                service : this,
+        		communityUuid : communityUuid        		
+            });
+        	invite._fields = lang.mixin({}, args);
+        	return invite;
+        },
 
         /*
          * Return a Community Member from Member or memberId. Throws an error if
@@ -1481,6 +1917,20 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
         _validateCommunityUuid : function(communityUuid) {
             if (!communityUuid || communityUuid.length == 0) {
                 return this.createBadRequestPromise("Invalid argument, expected communityUuid.");
+            }
+        },
+        /**
+         * Validate that the date-time is not empty, return a promise if invalid
+         */
+        _validateDateTimes : function(startDate, endDate){
+            if ((!startDate || startDate.length === 0) && (!endDate || endDate.length === 0)) {
+                return this.createBadRequestPromise("Invalid date arguments, expected either a startDate, endDate or both as parameters.");
+            }
+        },
+        
+        _validateContributorId : function(contributorId) {
+        	if (!contributorId || contributorId.length == 0) {
+                return this.createBadRequestPromise("Invalid argument, expected contributorId.");
             }
         },
 
@@ -1554,6 +2004,76 @@ define([ "../declare", "../config", "../lang", "../stringUtil", "../Promise", ".
                 return value;
             };
             return stringUtil.transform(MemberTmpl, member, transformer, member);
+        },
+        /*
+         * Construct post data for create invite
+         */
+        _constructCreateInvitePostData: function(contributorId){
+        	var isEmail = this.isEmail(contributorId) ? true : false;
+        	var contributorMap = {};
+        	if(isEmail){
+        		contributorMap["getEmail"] = contributorId;
+        	}else{
+        		contributorMap["getUserid"] = contributorId;
+        	}
+        	var transformer = function(value,key) {        		
+        		var returnVal = null;
+                if (key == "getEmail") {
+                	if(isEmail){
+	                    if (value) {
+	                    	returnVal = stringUtil.transform(EmailTmpl, {
+	                            "email" : value
+	                        });
+	                    }
+                	}
+                };
+                if (key == "getUserid") {
+                	if(!isEmail){
+	                    if (value) {
+	                    	returnVal = stringUtil.transform(UseridTmpl, {
+	                            "userid" : value
+	                        });
+	                    }
+                	}
+                }
+                return returnVal;
+            };
+            return stringUtil.transform(CreateInviteTmpl, contributorMap, transformer, null);
+        },
+        /*
+         * Construct post data for accept invite
+         */
+        _constructAcceptInvitePostData: function(contributorId){
+        	var isEmail = this.isEmail(contributorId) ? true : false;
+        	var contributorMap = {};
+        	if(isEmail){
+        		contributorMap["getEmail"] = contributorId;
+        	}else{
+        		contributorMap["getUserid"] = contributorId;
+        	}
+        	var transformer = function(value,key) {        		
+        		var returnVal = null;
+                if (key == "getEmail") {
+                	if(isEmail){
+	                    if (value) {
+	                    	returnVal = stringUtil.transform(EmailTmpl, {
+	                            "email" : value
+	                        });
+	                    }
+                	}
+                };
+                if (key == "getUserid") {
+                	if(!isEmail){
+	                    if (value) {
+	                    	returnVal = stringUtil.transform(UseridTmpl, {
+	                            "userid" : value
+	                        });
+	                    }
+                	}
+                }
+                return returnVal;
+            };
+            return stringUtil.transform(AcceptInviteTmpl, contributorMap, transformer, null);
         }
     });
     return CommunityService;

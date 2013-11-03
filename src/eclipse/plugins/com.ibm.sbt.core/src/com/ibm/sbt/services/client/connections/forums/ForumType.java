@@ -31,7 +31,9 @@ public enum ForumType {
 	TOPIC("topic"),
 	RESOURCES("resources"),
 	REPORTS("reports"),
-	ACL("acl");
+	ACL("acl"),
+	TAGS("tags"),
+	RECOMMENDATIONS("recommendation"); 
 	
 	String forumType;
 	

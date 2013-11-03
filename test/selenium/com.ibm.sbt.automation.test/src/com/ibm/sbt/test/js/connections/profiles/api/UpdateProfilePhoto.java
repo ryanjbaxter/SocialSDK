@@ -23,9 +23,8 @@ import java.io.IOException;
 
 import javax.imageio.ImageIO;
 
-import junit.framework.Assert;
-
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.openqa.selenium.By;

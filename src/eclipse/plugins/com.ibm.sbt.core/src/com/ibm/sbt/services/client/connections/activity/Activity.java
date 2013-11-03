@@ -79,7 +79,7 @@ public class Activity extends BaseEntity {
 	public Object constructPayload() throws TransformerException {
 		ActivityTransformer activityTransformer = new ActivityTransformer();
 		if(!fields.containsKey("Category"))
-			this.setCategory("activity");
+			this.setEntryType("activity");
 		return convertToXML(activityTransformer.transform(fields));
 	}
 	
@@ -127,8 +127,22 @@ public class Activity extends BaseEntity {
 		setAsString(ActivityXPath.Content, goal);
 	}
 	
-	public void setContent(String goal){
-		setGoal(goal);
+	/**
+	 * Method fetches the Content Type
+	 * @param content
+	 */
+	public void setContent(String content){
+		setGoal(content);
+	}
+	
+	/**
+	 * Method allows you to set the Content Type while creating an Activity(Node)
+	 * @param type
+	 */
+	public void setContentType(String type){
+		if(type != null) {
+			setAsString(ActivityXPath.ContentType, type);
+		}
 	}
 	
 	public void setCommunityUuid(String communityUuid){
@@ -143,12 +157,16 @@ public class Activity extends BaseEntity {
 		}
 	}
 	
-	public void setCategory(String category){
-		if(StringUtil.isNotEmpty(category)) {
-			setAsString(ActivityXPath.Category, category); 
+	public void setEntryType(String type){
+		if(StringUtil.isNotEmpty(type)) {
+			setAsString(ActivityXPath.Category, type); 
 		}
 	}
 	
+	/**
+	 * returns the complete id of the activity
+	 * @return
+	 */
 	public String getId() {
 		if(!StringUtil.isEmpty(this.id)) {
 			return id;
@@ -156,6 +174,10 @@ public class Activity extends BaseEntity {
 		return getAsString(ActivityXPath.Id); 
 	}
 	
+	/**
+	 * returns the extracted activity Id from the Id string
+	 * @return
+	 */
 	public String getActivityId() {
 		String id = getId();
 		int startOfId = id.lastIndexOf(":");
@@ -165,7 +187,11 @@ public class Activity extends BaseEntity {
 	}
 	
 	public String getTitle() {
-		return getAsString(ActivityXPath.Title);
+		String title = getAsString(ActivityXPath.Title);
+		if(StringUtil.isEmpty(title)) {
+			title = getAsString(ActivityXPath.ActivityNodeTitle);
+		}
+		return title;
 	}
 	
 	public String getUpdated() {
@@ -206,7 +232,11 @@ public class Activity extends BaseEntity {
 		return getAsString(ActivityXPath.Content);
 	}
 	
-	public String getCategory() {
+	public String getContentType() {
+		return getAsString(ActivityXPath.ContentType);
+	}
+	
+	public String getEntryType() {
 		return getAsString(ActivityXPath.Category);
 	}
 	
@@ -273,8 +303,9 @@ public class Activity extends BaseEntity {
 
 	public Activity copyTo(Activity restoreActivity) throws ActivityServiceException {
 		restoreActivity.setId(this.getActivityId());
-		restoreActivity.setCategory(this.getCategory());
+		restoreActivity.setEntryType(this.getEntryType());
 		restoreActivity.setGoal(this.getContent());
+		restoreActivity.setContentType(this.getContentType());
 		restoreActivity.setTitle(this.getTitle());
 		restoreActivity.setCommunityUuid(this.getCommunityUuid());
 		restoreActivity.setCommunityLink(this.getCommunityLink());

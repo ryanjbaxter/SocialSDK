@@ -43,8 +43,17 @@ public class Forum extends BaseForumEntity {
 	public Forum(ForumService forumsService, String id) {
 		super(forumsService,id);
 	}
+	
+	/**
+     * Constructor
+     *
+     * @param ForumService
+     */
+    public Forum(ForumService forumsService) {
+            super(forumsService);
+    }
 
-	public Forum(BaseService svc, DataHandler<?> handler) {
+    public Forum(BaseService svc, DataHandler<?> handler) {
 		super(svc,handler);
 	}
 	
@@ -57,7 +66,7 @@ public class Forum extends BaseForumEntity {
 	/*
 	 * This method returns uid of forum
 	 */
-	public String getForumUuid() throws ForumServiceException{
+	public String getForumUuid() {
 		return super.getUid();
 	}
 	
@@ -103,7 +112,7 @@ public class Forum extends BaseForumEntity {
      * @return {String} Url of the forum
      */
     public String getForumUrl() {
-        return getAsString(ForumsXPath.selfUrl);
+        return getAsString(ForumsXPath.alternateUrl);
     }
 	
 	/**

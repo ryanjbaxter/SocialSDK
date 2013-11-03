@@ -43,7 +43,7 @@ import com.ibm.sbt.security.authentication.password.consumer.UserPassword;
 import com.ibm.sbt.security.credential.store.CredentialStore;
 import com.ibm.sbt.security.credential.store.CredentialStoreException;
 import com.ibm.sbt.security.credential.store.CredentialStoreFactory;
-import com.ibm.sbt.service.core.handlers.BasicAuthCredsHandler;
+import com.ibm.sbt.service.core.handlers.AuthCredsHandler;
 import com.ibm.sbt.service.core.servlet.ServiceServlet;
 import com.ibm.sbt.services.client.ClientServicesException;
 import com.ibm.sbt.services.endpoints.js.JSReference;
@@ -158,7 +158,7 @@ public class BasicEndpoint extends AbstractEndpoint {
             	   	String endPointName = authPage.substring(authPage.indexOf("=")+1, authPage.length());
                 	String baseUrl = UrlUtil.getBaseUrl(((HttpServletRequest)context.getHttpRequest()));
                 	String servletPath = ServiceServlet.getServletPath();
-                	String basicProxyUrl = BasicAuthCredsHandler.URL_PATH;
+                	String basicProxyUrl = AuthCredsHandler.URL_PATH;
                     
                 	//constructing proxy action url
                 	String postToProxy = PathUtil.concat(baseUrl, servletPath, '/');
@@ -192,18 +192,20 @@ public class BasicEndpoint extends AbstractEndpoint {
     	try {
 	        if(!storeAlreadyTried) {
 	            synchronized (this) {
-	            	Context context = Context.get();
-	                UserPassword u = null;
-	            	CredentialStore cs = CredentialStoreFactory.getCredentialStore(getCredentialStore());
-		            if(cs!=null) {
-		                u = (UserPassword)cs.load(getUrl(),STORE_TYPE,context.getCurrentUserId());
-	            	}
-	                if(u!=null) {
-	                    this.user = u.getUser();
-	                    this.password = u.getPassword();
-	                    return true;
-	                }
-	                storeAlreadyTried = true;
+	    	    	Context context = Context.getUnchecked();
+	    	    	if (context != null) {
+		                UserPassword u = null;
+		            	CredentialStore cs = CredentialStoreFactory.getCredentialStore(getCredentialStore());
+			            if(cs!=null) {
+			                u = (UserPassword)cs.load(getUrl(),STORE_TYPE,context.getCurrentUserId());
+		            	}
+		                if(u!=null) {
+		                    this.user = u.getUser();
+		                    this.password = u.getPassword();
+		                    return true;
+		                }
+		                storeAlreadyTried = true;
+	    	    	}
 	            }
 	        }
 	        return false;
@@ -214,13 +216,15 @@ public class BasicEndpoint extends AbstractEndpoint {
 
     public boolean writeToStore() throws AuthenticationException {
     	try {
-	    	Context context = Context.get();
-	    	CredentialStore cs = CredentialStoreFactory.getCredentialStore(getCredentialStore());
-	        if(cs!=null) {
-	        	UserPassword u = new UserPassword(user,password);
-	            cs.store(getUrl(), STORE_TYPE, context.getCurrentUserId(), u);
-	            return true;
-	        }
+	    	Context context = Context.getUnchecked();
+	    	if (context != null) {
+		    	CredentialStore cs = CredentialStoreFactory.getCredentialStore(getCredentialStore());
+		        if(cs!=null) {
+		        	UserPassword u = new UserPassword(user,password);
+		            cs.store(getUrl(), STORE_TYPE, context.getCurrentUserId(), u);
+		            return true;
+		        }
+	    	}
 	        return false;
     	} catch(CredentialStoreException ex) {
     		throw new AuthenticationException(ex,"Error while writing basic credentials to the store");
@@ -229,12 +233,14 @@ public class BasicEndpoint extends AbstractEndpoint {
 
     public boolean clearFromStore() throws AuthenticationException {
     	try {
-	    	Context context = Context.get();
-	    	CredentialStore cs = CredentialStoreFactory.getCredentialStore(getCredentialStore());
-	        if(cs!=null) {
-	            cs.remove(getUrl(), STORE_TYPE, context.getCurrentUserId());
-	            return true;
-	        }
+	    	Context context = Context.getUnchecked();
+	    	if (context != null) {
+		    	CredentialStore cs = CredentialStoreFactory.getCredentialStore(getCredentialStore());
+		        if(cs!=null) {
+		            cs.remove(getUrl(), STORE_TYPE, context.getCurrentUserId());
+		            return true;
+		        }
+	    	}
 	        return false;
 		} catch(CredentialStoreException ex) {
 			throw new AuthenticationException(ex,"Error while deleting basic credentials from the store");

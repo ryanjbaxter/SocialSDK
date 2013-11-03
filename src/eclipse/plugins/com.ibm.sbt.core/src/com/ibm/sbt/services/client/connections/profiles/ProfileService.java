@@ -22,6 +22,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
+
 import com.ibm.commons.util.StringUtil;
 import com.ibm.sbt.services.client.ClientServicesException;
 import com.ibm.sbt.services.client.Response;
@@ -37,6 +38,7 @@ import com.ibm.sbt.services.client.connections.profiles.utils.ProfilesConstants;
 import com.ibm.sbt.services.client.base.datahandlers.JsonDataHandler;
 import com.ibm.commons.util.io.json.JsonJavaObject;
 import com.ibm.sbt.services.client.ClientService;
+import com.ibm.sbt.services.endpoints.Endpoint;
 import com.ibm.sbt.services.util.AuthUtil;
 /**
  * ProfileService can be used to perform operations related to Profiles. 
@@ -89,6 +91,29 @@ public class ProfileService extends BaseService {
 	 */
 
 	public ProfileService(String endpoint, int cacheSize) {
+		super(endpoint, cacheSize);
+	}
+	
+	/**
+	 * Constructor  - Creates ProfileService Object with a specified endpoint
+	 * 
+	 * @param endpoint
+	 *            Creates ProfileService with specified endpoint and a default CacheSize
+	 */
+
+	public ProfileService(Endpoint endpoint) {
+		this(endpoint, DEFAULT_CACHE_SIZE);
+	}
+
+	/**
+	 * Constructor - Creates ProfileService Object with specified endpoint and CacheSize
+	 * 
+	 * @param endpoint
+	 * @param cacheSize
+	 *            Creates ProfileService with specified endpoint and CacheSize
+	 */
+
+	public ProfileService(Endpoint endpoint, int cacheSize) {
 		super(endpoint, cacheSize);
 	}
 	
@@ -721,7 +746,7 @@ public class ProfileService extends BaseService {
 	
 	public String getMyUserId()throws ProfileServiceException{
 		String id = "";
-		String peopleApiUrl ="/connections/opensocial/basic/rest/people/@me/";
+		String peopleApiUrl ="/{connections}/opensocial/basic/rest/people/@me/";
 		try {
 			Response feed = getClientService().get(peopleApiUrl);
 			JsonDataHandler dataHandler = new JsonDataHandler((JsonJavaObject)feed.getData());
@@ -887,21 +912,6 @@ public class ProfileService extends BaseService {
 		}
 
 		return proBaseUrl.toString();
-	}
-
-	/*
-	 * Method to check if the userid is email
-	 * <p>
-	 * Current check is based on finding @ in the userid.
-	 * 
-	 * @param userId
-	 * @return boolean
-	 */
-	protected boolean isEmail(String userId) {
-		if (StringUtil.isEmpty(userId)) {
-			return false;
-		}
-		return userId.contains("@");
 	}
 
 	protected void setIdParameter(Map<String, String>parameters, String id){

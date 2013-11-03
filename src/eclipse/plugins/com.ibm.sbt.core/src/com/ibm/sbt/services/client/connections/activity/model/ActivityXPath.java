@@ -15,7 +15,11 @@
  */
 
 package com.ibm.sbt.services.client.connections.activity.model;
-
+/**
+ * Enum for Activity Service X Paths
+ * @author Vimal Dhupar
+ *
+ */
 import com.ibm.commons.xml.DOMUtil;
 import com.ibm.commons.xml.XMLException;
 import com.ibm.commons.xml.xpath.XPathExpression;
@@ -31,16 +35,17 @@ public enum ActivityXPath implements FieldEntry {
 	ContributorName(".//a:contributor/a:name"),
 	ContributorUserUuid(".//a:contributor/snx:userid"),
 	ContributorEmail(".//a:contributor/a:email"),
-	//OwnerId(".//author/snx:userid"), 
 	MemberId("id"),
+	MemberIdForSC("contributor/snx:org/uri"),
+	ActivityNodeTitle(".//a:title"),
 	OwnerId(".//contributor/snx:userid[@snx:role=\"owner\"]"),
 	FileName("/a:feed/a:entry/a:title"),
 	FileUuid("/a:feed/a:entry/td:uuid"),
-	Entry("/a:feed/a:entry"),
+	Entry("/a:feed/a:entry | /a:entry"),
 	Category(".//a:category[@scheme=\"http://www.ibm.com/xmlns/prod/sn/type\"]/@term"),
 	CategoryFlagDelete(".//a:category[@term=\"deleted\"]/@label"),
 	CommunityLink(".//a:link[@rel=\"http://www.ibm.com/xmlns/prod/sn/container\"]/@href"),
-	Title(".//a:title"),
+	Title("/a:entry/app:collection/a:title | .//app:collection/a:title"),
 	TotalResults("/a:feed/os:totalResults"),
 	StartIndex("/feed/os:startIndex"),
 	Published(".//a:published"),
@@ -51,6 +56,7 @@ public enum ActivityXPath implements FieldEntry {
 	Permissions(".//snx:permissions"), 
 	Icon(".//snx:icon"), 
 	Content(".//a:content"),
+	ContentType(".//a:content/@type"),
 	DueDate(".//snx:duedate"),
 	CommunityUuid(".//snx:communityUuid"),
 	Theme(".//snx:themeId"),
@@ -84,7 +90,8 @@ public enum ActivityXPath implements FieldEntry {
 	fieldLinkTitle("./link/@href"),
 	fieldPersonName("./name"),
 	fieldPersonEmail("./email"),
-	fieldPersonUserId("./snx:userid");
+	fieldPersonUserId("./snx:userid"), 
+	nodeUrl(".//a:link[@rel=\"self\"]/@href");
 	
 	private final XPathExpression path;
 	

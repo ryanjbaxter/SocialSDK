@@ -1,5 +1,5 @@
 /*
- * © Copyright IBM Corp. 2012,2013
+ * ï¿½ Copyright IBM Corp. 2012,2013
  * 
  * Licensed under the Apache License, Version 2.0 (the "License"); 
  * you may not use this file except in compliance with the License. 
@@ -149,7 +149,38 @@ define([ "../lang", "./ConnectionsConstants" ], function(lang,conn) {
             authorUserid : "a:author/snx:userid",
             authorName : "a:author/a:name",
             contributorUserid : "a:contributor/snx:userid",
-            contributorName : "a:contributor/a:name"
+            contributorName : "a:contributor/a:name",
+            communityUuid : "snx:communityUuid"
+        },
+        
+        EventXPath : {
+            // used by getEntityData
+            entry : "/a:entry",
+            // used by getEntityId
+            uid : "a:id",
+            // used by getters
+            eventUuid : "snx:eventUuid",
+            eventInstUuid : "snx:eventInstUuid",
+            title : "a:title",
+            eventAtomUrl : "a:link[@rel='self']/@href",
+            content : "a:content[@type='html']",
+            location : "snx:location",
+            authorUserid : "a:author/snx:userid",
+            authorName : "a:author/a:name",
+            authorEmail : "a:author/a:email",
+            authorState : "a:author/snx:userState",
+            updated : "a:updated",
+            communityLink : "a:link[@rel='http://www.ibm.com/xmlns/prod/sn/container']/@href",
+            eventAtomInstances : "a:link[@rel='http://www.ibm.com/xmlns/prod/sn/calendar/event/instances']/@href",
+            eventAtomAttendees : "a:link[@rel='http://www.ibm.com/xmlns/prod/sn/calendar/event/attend']/@href",
+            eventAtomFollowers : "a:link[@rel='http://www.ibm.com/xmlns/prod/sn/calendar/event/follow']/@href",
+            frequency : "snx:recurrence/@frequency",
+            interval : "snx:recurrence/@interval",
+            until : "snx:recurrence/snx:until",
+            allDay : "snx:recurrence/snx:allday",
+            startDate : "snx:recurrence/snx:startDate",
+            endDate : "snx:recurrence/snx:endDate",
+            byDay : "snx:recurrence/snx:byDay"
         },
 
         /**
@@ -159,9 +190,9 @@ define([ "../lang", "./ConnectionsConstants" ], function(lang,conn) {
          * search  Well-formed full text search query. Performs a text search on community titles and descriptions.
          * since   Includes in the resulting feed all communities updated after a specified date. Specify the date using a date-time value that conforms to RFC3339. Use an upper case "T" to separate the date and time, and an uppercase "Z" in the absence of a numeric time zone offset. For example: 2009-01-04T20:32:31.171Z.
          * sortField   Order in which to sort the results. Options are:
-         *                                          lastmod – Sorts the results by last modified date.
-         *                                          name – Sorts the results by entry name.
-         *                                          count – Sorts the results by relevance.
+         *                                          lastmod ï¿½ Sorts the results by last modified date.
+         *                                          name ï¿½ Sorts the results by entry name.
+         *                                          count ï¿½ Sorts the results by relevance.
          * tag Returns communities with the specified tag. Search by one tag at a time.
          * userid  Unique ID that represents a specific person.
          */
@@ -206,6 +237,15 @@ define([ "../lang", "./ConnectionsConstants" ], function(lang,conn) {
         AtomCommunityInvitesMy : "/${communities}/service/atom/community/invites/my",
         
         /**
+         * URL to delete/create Community Invites
+         * 
+         * @property AtomCommunityInvites
+         * @type String
+         * @for sbt.connections.CommunityService
+         */
+        AtomCommunityInvites : "${communities}/service/atom/community/invites",
+        
+        /**
          * A feed of subcommunities.
          * 
          * Get a list of subcommunities associated with a community.
@@ -247,7 +287,47 @@ define([ "../lang", "./ConnectionsConstants" ], function(lang,conn) {
          * @type String
          * @for sbt.connections.CommunityService
          */
-        AtomCommunityForumTopics : "/${communities}/service/atom/community/forum/topics"
-
+        AtomCommunityForumTopics : "/${communities}/service/atom/community/forum/topics",
+        
+        /**
+         * Get a feed of a Community's bookmarks. Requires a url parameter of the form communityUuid=xxx
+         * @property AtomCommunityBookmarks
+         * @type String
+         * @for sbt.connections.CommunityService
+         */
+        AtomCommunityBookmarks : "/${communities}/service/atom/community/bookmarks",
+        
+        /**
+         * Get a feed of a Community's events.
+         * 
+         * Required url parameters: 
+         *   calendarUuid - The uuid of the community to get events from.
+         *   
+         *   startDate and/or endDate. At least one of these must be present. Format is any date-time that conforms to rfc3339. 
+         *   startDate - Include events that end after this date.
+         *   endDate - Include events that end before this date.
+         *   
+         * Optional Url parameters
+         *   page - Page number, specifies the page to be returned. Default value is page 1.
+         *   ps - Page size. Number of entries to return per page. Defaule value is 10, max is 100.
+         *   tags - Tag filter, only return events with these tags. Multiple tags are separated using +, e.g. tag1+tag2
+         *   
+         * @property AtomCommunityEvents
+         * @type String
+         * @for sbt.connections.CommunityService
+         */
+        AtomCommunityEvents : "/${communities}/calendar/atom/calendar/event",
+        
+        /**
+         * Get full atom event.
+         * 
+         * Required url parameters: 
+         *   eventInstUuid - The uuid of the event, gotten from the AtomCommunityEvents feed.
+         *   
+         * @property AtomCommunityEvent
+         * @type String
+         * @for sbt.connections.CommunityService
+         */
+        AtomCommunityEvent : "/${communities}/calendar/atom/calendar/event"
     }, conn);
 });

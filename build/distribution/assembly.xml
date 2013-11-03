@@ -72,6 +72,7 @@
         <include>com.ibm.sbt.sample:acme.sample.webapp</include>
         <include>com.ibm.sbt.sample:helloworld.webapp</include>
         <include>com.ibm.sbt.sample:smartcloud.webapp</include>
+        <include>com.ibm.sbt.sample:grantaccess.webapp</include>
       </includes>
       <binaries>
         <outputDirectory>sbtsdk/samples/war</outputDirectory>
@@ -90,7 +91,7 @@
       </includes>
       <binaries>
         <outputDirectory>sbtsdk/samples/jar</outputDirectory>
-        <outputFileNameMapping>${module.artifactId}-${project.version}.${module.extension}</outputFileNameMapping>
+        <outputFileNameMapping>${module.artifactId}-${project.version}.${buildLabel}.${module.extension}</outputFileNameMapping>
         <unpack>false</unpack>
       </binaries>
     </moduleSet>

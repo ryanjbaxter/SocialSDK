@@ -88,7 +88,7 @@ public class OAuth1Handler extends OAuthHandler implements Serializable{
 	protected String 			signatureMethod;
 	protected boolean			forceTrustSSLCertificate;
 	protected AccessToken 		accessTokenObject;
-
+	
 	public OAuth1Handler() {
 		this.expireThreshold = EXPIRE_THRESHOLD;
 	}
@@ -590,7 +590,7 @@ public class OAuth1Handler extends OAuthHandler implements Serializable{
 			login = true;
 		}
 
-		String userId = context.getCurrentUserId();
+		String userId = getUserId();
 
 		// Look for a token in the store
 		// If the user is anonymous, then the token might had been stored in the session
@@ -810,7 +810,7 @@ public class OAuth1Handler extends OAuthHandler implements Serializable{
 		readConsumerToken();
 
 		if (StringUtil.isEmpty(userId)) {
-			userId = context.getCurrentUserId();
+			userId = getUserId();
 			// Anonymous is not valid
 			if (StringUtil.isEmpty(userId)) {
 				return null;
@@ -890,7 +890,7 @@ public class OAuth1Handler extends OAuthHandler implements Serializable{
 						// if the token is already present, and was expired due to which we have fetched a new 
 						// token, then we remove the token from the store first and then add this new token.
 						deleteToken();
-						credStore.store(getServiceName(), ACCESS_TOKEN_STORE_TYPE, context.getCurrentUserId(), token);
+						credStore.store(getServiceName(), ACCESS_TOKEN_STORE_TYPE, getUserId(), token);
 					} catch (CredentialStoreException cse) {
 						throw new OAuthException(cse);
 					}
@@ -938,7 +938,7 @@ public class OAuth1Handler extends OAuthHandler implements Serializable{
 		readConsumerToken();
 
 		if (StringUtil.isEmpty(userId)) {
-			userId = context.getCurrentUserId();
+			userId = getUserId();
 			// Anonymous is not valid
 			if (StringUtil.isEmpty(userId)) {
 				return;
@@ -952,7 +952,7 @@ public class OAuth1Handler extends OAuthHandler implements Serializable{
 				CredentialStore credStore = CredentialStoreFactory.getCredentialStore(getCredentialStore());
 				if (credStore != null) {
 					// Find the token for this user
-					credStore.remove(getServiceName(), ACCESS_TOKEN_STORE_TYPE, context.getCurrentUserId());
+					credStore.remove(getServiceName(), ACCESS_TOKEN_STORE_TYPE, getUserId());
 				}
 			} catch (CredentialStoreException cse) {
 				throw new OAuthException(cse, "Error trying to delete Token.");
@@ -1010,8 +1010,8 @@ public class OAuth1Handler extends OAuthHandler implements Serializable{
 			return _readToken(token, verifier);
 		}
 	}
-	protected AccessToken _readToken(String token, String verifier)
-	throws OAuthException {
+	
+	protected AccessToken _readToken(String token, String verifier) throws OAuthException {
 		// first we set the Verifier which will be used to get the Access Token
 		//		setVerifierCode(verifier);
 		try {
@@ -1027,11 +1027,6 @@ public class OAuth1Handler extends OAuthHandler implements Serializable{
 		}
 
 		return createToken(getAppId(), getServiceName(), this, getUserId());
-	}
-
-	private String getUserId() {
-		Context context = Context.get();
-		return context.getCurrentUserId();
 	}
 
 	public String getApplicationPage() {
