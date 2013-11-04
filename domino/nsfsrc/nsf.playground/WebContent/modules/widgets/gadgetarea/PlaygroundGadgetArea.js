@@ -7,10 +7,10 @@
 define(['dojo/_base/declare', 'explorer/widgets/gadgetarea/GadgetArea', 'dojo/on', 'dojo/topic', 'dojo/hash', 'dojo/_base/lang', 
         'explorer/ExplorerContainer', 'explorer/widgets/Loading', 'dojo/dom', 'playground/gadget-spec-service',
         'dojo/io-query', 'dojo/json', 'dijit/registry', 'playground/util', 'explorer/widgets/gadgetarea/PreferencesDialog',
-        'dojo/dom-construct', 'dojo/_base/window'],
+        'dojo/dom-construct', 'dojo/_base/window', 'dojo/dom-class'],
         function(declare, GadgetArea, on, topic, hash, lang, ExplorerContainer, Loading, dom, 
         		gadgetSpecService, ioQuery, json, registry, util, PreferencesDialog, domConstruct,
-        		win) {
+        		win, domClass) {
 	return declare('PlaygroundGadgetAreaWidget', [ GadgetArea ], {
     	  //TODO at some point we actually want to use a real template
     	  templateString : '<div></div>',
@@ -23,7 +23,7 @@ define(['dojo/_base/declare', 'explorer/widgets/gadgetarea/GadgetArea', 'dojo/on
     	   */
     	  startup : function() {
 			this.inherited(arguments);
-			
+			domClass.add(this.gadgetToolbar.domNode, 'hide');
 			this.prefDialog = new PreferencesDialog();
 			domConstruct.place(this.prefDialog.domNode, win.body(), 'last');
 			this.prefDialog.startup();
@@ -89,6 +89,9 @@ define(['dojo/_base/declare', 'explorer/widgets/gadgetarea/GadgetArea', 'dojo/on
         	  gadgetSpecService.getGadgetSpec(id).then(function(r) {
         		  util.updateEditorContent(r, id);
         		  self.runCode(false);
+            	  if(domClass.contains(self.gadgetToolbar.domNode, 'hide')) {
+            		  domClass.remove(self.gadgetToolbar.domNode, 'hide');
+            	  }
         	  }, 
         	  function(error) {
         		  alert("Error:\n"+error.msg);
